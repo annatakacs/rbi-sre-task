@@ -37,3 +37,8 @@ variable "user_data" {
   description = "User data executed at EC2 launch"
   type        = string
 }
+
+variable "key_name" {
+  description = "Name of the ssh key to use for EC2 setup"
+  type        = string
+}
