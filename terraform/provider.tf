@@ -1,5 +1,5 @@
 provider "aws" {
-  region = "eu-north-1"
+  region              = "eu-north-1"
   allowed_account_ids = ["471112859559"]
   assume_role {
     role_arn = "arn:aws:iam::471112859559:role/terraform-role"
