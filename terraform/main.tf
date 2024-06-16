@@ -14,17 +14,24 @@ module "twitter_ec2_sg" {
   vpc_id      = var.vpc_id
 
   ingresses = {
-    "first" = {
+    "http" = {
       description = "Allow inbound HTTP traffic"
       from_port   = 80
       to_port     = 80
       protocol    = "tcp"
       cidr_blocks = ["0.0.0.0/0"]
     },
-    "second" = {
+    "https" = {
       description = "Allow inbound HTTPS traffic"
       from_port   = 443
       to_port     = 443
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+    },
+    "ssh" = {
+      description = "Allow inbound SSH traffic"
+      from_port   = 22
+      to_port     = 22
       protocol    = "tcp"
       cidr_blocks = ["0.0.0.0/0"]
     }
@@ -56,7 +63,7 @@ module "twitter_ec2_instance" {
   subnet_id = var.subnet_id
 
   user_data = file("./scripts/user-data.sh")
-
+  key_name = "pipeline"
 }
 
 module "twitter_route_entry" {

@@ -12,4 +12,6 @@ module "ec2_instance" {
   iam_role_policies           = var.iam_role_policies
 
   user_data = var.user_data
+
+  key_name = var.key_name
 }
