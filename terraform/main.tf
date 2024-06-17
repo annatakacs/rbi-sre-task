@@ -4,11 +4,14 @@ module "twitter_ecr_repo" {
   repository_name                   = var.repository_name
   repository_read_write_access_arns = var.repository_read_write_access_arns
   repository_read_access_arns       = var.repository_read_access_arns
+  create_lifecycle_policy           = true
+  repository_lifecycle_policy       = file("./scripts/ecr-lifecycle-policy.json")
 }
 
 module "twitter_ec2_sg" {
   source = "./modules/security_group"
 
+  #checkov:skip=CKV2_AWS_5: Security group will be attached in EC2 module
   sg_name     = var.sg_name
   sg_description = var.sg_description
   vpc_id      = var.vpc_id
