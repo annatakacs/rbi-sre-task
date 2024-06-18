@@ -12,9 +12,9 @@ module "twitter_ec2_sg" {
   source = "./modules/security_group"
 
   #checkov:skip=CKV2_AWS_5: Security group will be attached in EC2 module
-  sg_name     = var.sg_name
+  sg_name        = var.sg_name
   sg_description = var.sg_description
-  vpc_id      = var.vpc_id
+  vpc_id         = var.vpc_id
 
   ingresses = {
     "http" = {
@@ -54,11 +54,11 @@ module "twitter_ec2_sg" {
 module "twitter_ec2_instance" {
   source = "./modules/ec2"
 
-  vpc_security_group_ids = module.twitter_ec2_sg.sg_id
-  instance_name = var.instance_name
-  instance_type = var.instance_type
+  vpc_security_group_ids      = module.twitter_ec2_sg.sg_id
+  instance_name               = var.instance_name
+  instance_type               = var.instance_type
   create_iam_instance_profile = true
-  iam_role_name = "${var.instance_name}-role"
+  iam_role_name               = "${var.instance_name}-role"
   iam_role_policies = {
     SSMAccess = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
     ECRAccess = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
@@ -66,7 +66,7 @@ module "twitter_ec2_instance" {
   subnet_id = var.subnet_id
 
   user_data = file("./scripts/user-data.sh")
-  key_name = "pipeline"
+  key_name  = "pipeline"
 }
 
 module "twitter_route_entry" {
@@ -77,6 +77,6 @@ module "twitter_route_entry" {
   route_name    = var.route_name
   route_type    = var.route_type
   route_ttl     = var.route_ttl
-  route_records = [ module.twitter_ec2_instance.ec2_public_ip ]
+  route_records = [module.twitter_ec2_instance.ec2_public_ip]
 
 }
