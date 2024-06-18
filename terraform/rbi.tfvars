@@ -1,6 +1,7 @@
 ### Global config
 vpc_id    = "vpc-00609fbfe87cab659"
 subnet_id = "subnet-0dfb54838e1d03509"
+zone_name = "anna-takacs.com"
 
 ### ECR config
 
@@ -23,3 +24,12 @@ sg_description = "Security group for linux tweet app EC2 instance"
 
 instance_name = "linux-tweet-app"
 instance_type = "t3.micro"
+
+### S3 bucket config
+
+bucket_name = "letsencrypt-cert-bucket"
+
+### ACME config
+
+email_address             = "annaa.takacs@gmail.com"
+subject_alternative_names = ["demo1.anna-takacs.com"]

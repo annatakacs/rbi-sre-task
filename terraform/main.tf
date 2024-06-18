@@ -11,7 +11,6 @@ module "twitter_ecr_repo" {
 module "twitter_ec2_sg" {
   source = "./modules/security_group"
 
-  #checkov:skip=CKV2_AWS_5: Security group will be attached in EC2 module
   sg_name        = var.sg_name
   sg_description = var.sg_description
   vpc_id         = var.vpc_id
@@ -61,7 +60,8 @@ module "twitter_ec2_instance" {
   iam_role_name               = "${var.instance_name}-role"
   iam_role_policies = {
     SSMAccess = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore",
-    ECRAccess = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+    ECRAccess = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly",
+    S3Access  = "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess"
   }
   subnet_id = var.subnet_id
 
@@ -72,11 +72,27 @@ module "twitter_ec2_instance" {
 module "twitter_route_entry" {
   source = "./modules/route53"
 
-  zone_name     = "anna-takacs.com"
+  zone_name     = var.zone_name
   private_zone  = false
   route_name    = var.route_name
   route_type    = var.route_type
   route_ttl     = var.route_ttl
   route_records = [module.twitter_ec2_instance.ec2_public_ip]
 
+}
+
+module "twitter_cert_bucket" {
+  source = "./modules/s3"
+
+  bucket_name = var.bucket_name
+}
+
+module "twitter_cert" {
+  source = "./modules/acme"
+
+  base_domain               = var.zone_name
+  privat_key_algorithm      = "RSA"
+  email_address             = var.email_address
+  subject_alternative_names = var.subject_alternative_names
+  bucket_name               = module.twitter_cert_bucket.bucket_name
 }
