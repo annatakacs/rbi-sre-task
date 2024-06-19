@@ -188,4 +188,4 @@ jobs:
           sudo cp -r /tmp/deploy/compose /home/ec2-user/
           sudo chown -R ec2-user:ec2-user /home/ec2-user/compose 
           cd /home/ec2-user/compose 
-          bash deploy-apps.sh ${{ steps.tf_parsed.outputs.bucket_name }} ${{ steps.tf_parsed.outputs.record_name }} ${{ steps.read_tag.outputs.image }} 
+          bash deploy-apps.sh "${{ steps.tf_parsed.outputs.bucket_name }}" "${{ steps.tf_parsed.outputs.record_name }}" "${{ steps.read_tag.outputs.image }}"

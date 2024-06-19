@@ -78,7 +78,6 @@ module "twitter_route_entry" {
   route_type    = var.route_type
   route_ttl     = var.route_ttl
   route_records = [module.twitter_ec2_instance.ec2_public_ip]
-
 }
 
 module "twitter_cert_bucket" {

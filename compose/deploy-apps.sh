@@ -1,18 +1,23 @@
 #!/bin/bash
+set -xe
 
 cert_dir="nginx/certs"
 s3_cert_dir="ssl-certs"
 bucket_name=$1
 domain=$2
 image=$3
+registry="471112859559.dkr.ecr.eu-north-1.amazonaws.com"
 
 if ! [ -x "$(command -v docker-compose)" ]; then
   echo 'Error: docker-compose is not installed.' >&2
   exit 1
 fi
 
+echo "Start up docker"
+sudo systemctl start docker
+
 echo "Configuring image tag";
-sed -i "s/IMAGE/$image/g" docker-compose.yml;
+sed -i "s@IMAGE@$image@g" docker-compose.yml;
 
 docker-compose down
 
@@ -26,11 +31,14 @@ cat $cert_dir/certificate_pem $cert_dir/issuer_pem > $cert_dir/fullchain.pem;
 cat $cert_dir/private_key_pem > $cert_dir/privkey.pem;
 
 echo "Preparing nginx configuration";
-sed -i "s/DOMAIN/$domain/g" nginx/default.conf;
+sed -i "s@DOMAIN@$domain@g" nginx/default.conf;
 
 echo "Preparing docker-compose.yml";
-sed -i "s/DOMAIN/$domain/g" docker-compose.yml;
+sed -i "s@DOMAIN@$domain@g" docker-compose.yml;
 sed -i "s@PATH_TO_CERT@$cert_dir@g" docker-compose.yml;
+
+echo "Login to ECR registry"
+aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin $registry
 
 echo "Start up apps"
 docker-compose up -d;
