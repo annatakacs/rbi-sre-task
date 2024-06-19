@@ -31,5 +31,4 @@ bucket_name = "letsencrypt-cert-bucket"
 
 ### ACME config
 
-email_address             = "annaa.takacs@gmail.com"
-subject_alternative_names = ["demo1.anna-takacs.com"]
+email_address = "annaa.takacs@gmail.com"

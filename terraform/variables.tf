@@ -87,8 +87,3 @@ variable "email_address" {
   type        = string
 }
 
-variable "subject_alternative_names" {
-  description = "List of SANs to associate with the certificate"
-  type        = list(string)
-}
-
