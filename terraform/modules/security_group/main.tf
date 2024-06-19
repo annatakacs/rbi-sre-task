@@ -1,4 +1,6 @@
 resource "aws_security_group" "sg" {
+  #checkov:skip=CKV2_AWS_5: Security group will be attached in EC2 module
+  
   name        = var.sg_name
   description = var.sg_description
   vpc_id      = var.vpc_id

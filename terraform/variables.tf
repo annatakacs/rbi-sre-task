@@ -44,6 +44,11 @@ variable "route_ttl" {
   type        = number
 }
 
+variable "zone_name" {
+  description = "Route53 zone name"
+  type        = string
+}
+
 ### SG config
 
 variable "sg_name" {
@@ -67,3 +72,23 @@ variable "instance_type" {
   description = "Type of the EC2 instance"
   type        = string
 }
+
+### S3 config
+
+variable "bucket_name" {
+  description = "Name of the bucket"
+  type        = string
+}
+
+### ACME config
+
+variable "email_address" {
+  description = "E-mail address registered with the requested certificate"
+  type        = string
+}
+
+variable "subject_alternative_names" {
+  description = "List of SANs to associate with the certificate"
+  type        = list(string)
+}
+

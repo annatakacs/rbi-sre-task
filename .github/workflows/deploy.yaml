@@ -2,25 +2,103 @@ name: Deploy Linux Tweet app with reverse proxy and Let's encrypt cert
 
 on:
   push:
-    branches: [ main, feature/* ]
+    branches: [ feature/* ]
   pull_request:
     branches: [ main ]
 
+permissions:
+  id-token: write
+  contents: read 
+
+env:
+  TF_VERSION: v1.8.5
+  AWS_REGION: eu-north-1
+  TF_WORKDIR: ./terraform
+  ENV: rbi
+
 jobs:
-  build:
+  iac-security-scanning:
     runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.8
+        
+    - name: Test with Checkov
+      id: checkov
+      uses: bridgecrewio/checkov-action@master
+      with:
+        directory: ${{ env.TF_WORKDIR }}
+        framework: terraform
+
+  iac:
+    runs-on: ubuntu-latest
+    needs: iac-security-scanning
     steps:
     - uses: actions/checkout@v4
 
     - name: Configure AWS Credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: eu-north-1
-        role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
-        role-duration-seconds: 1200
-        role-session-name: PipelineSession
+        aws-region: ${{ env.AWS_REGION }}
+        role-to-assume: ${{ secrets.AWS_GITHUB_ACTION_ROLE }}  
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: ${{ env.TF_VERSION }}
+        terraform_wrapper: false
+
+    - name: Terraform Init
+      id: init
+      working-directory: ${{ env.TF_WORKDIR }}
+      shell: bash
+      run: |
+        terraform init
+
+    - name: Terraform Plan
+      id: plan
+      working-directory: ${{ env.TF_WORKDIR }}
+      shell: bash
+      run: |
+        terraform plan --var-file=${{ env.ENV }}.tfvars
+
+    - name: Terraform Apply
+      id: apply
+      working-directory: ${{ env.TF_WORKDIR }}
+      shell: bash
+      run: |
+        terraform apply --var-file=${{ env.ENV }}.tfvars --auto-approve
+
+    - name: Capture Terraform outputs
+      id: tf_outputs
+      working-directory: ${{ env.TF_WORKDIR }}
+      run: |
+        terraform output -json > terraform_output.json
+        cat terraform_output.json
+
+    - name: Upload Terraform outputs
+      uses: actions/upload-artifact@v4
+      with:
+        name: terraform_output
+        path: ${{ env.TF_WORKDIR }}/terraform_output.json
+        retention-days: 1
+        if-no-files-found: error
+ 
+  build:
+    runs-on: ubuntu-latest
+    needs: iac
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-region: ${{ env.AWS_REGION }}
+        role-to-assume: ${{ secrets.AWS_GITHUB_ACTION_ROLE }}
 
     - name: Login to Amazon ECR
       id: login-ecr
@@ -42,6 +120,15 @@ jobs:
         cd tweet_app
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        echo "IMAGE=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" > image_tag.txt
+    
+    - name: Save image tag for docker-compose job
+      uses: actions/upload-artifact@v4
+      with:
+        name: image_tag
+        path: ./tweet_app/image_tag.txt
+        retention-days: 1
+        if-no-files-found: error
 
   docker-compose:
     runs-on: ubuntu-latest
@@ -49,9 +136,36 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Download Image tag artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: image_tag
+
+    - name: Download Terraform output
+      uses: actions/download-artifact@v4
+      with:
+        name: terraform_output
+
+    - name: Read image tag
+      id: read_tag
+      run: |
+        IMAGE=$(cat image_tag.txt | cut -d'=' -f2)
+        echo "::set-output name=image::${IMAGE}"
+
+    - name: Parse terraform output
+      id: tf_parsed
+      run: |
+        cat terraform_output.json
+        outputs=$(cat terraform_output.json)
+        echo $outputs | jq -r '.bucket_name.value'
+        echo $outputs | jq -r '.record_name.value'
+        echo "bucket_name=$(echo $outputs | jq -r '.bucket_name.value')" >> $GITHUB_OUTPUT
+        echo "record_name=$(echo $outputs | jq -r '.record_name.value')" >> $GITHUB_OUTPUT
+    
     - name: debug
       run: |
-        ls -latr
+        echo ${{ steps.tf_parsed.outputs.bucket_name }}
+        echo ${{ steps.tf_parsed.outputs.record_name }}
 
     - name: copy file via scp
       uses: appleboy/scp-action@master
@@ -60,28 +174,18 @@ jobs:
         username: ${{ secrets.USERNAME }}
         port: 22
         key: ${{ secrets.SSH_PRIVATE_KEY }}
-        source: "./*"
+        source: "./compose/"
         target: "/tmp/deploy"
         
-    - name: AWS SSM Send-Command
-      uses: peterkimzz/aws-ssm-send-command@master
+    - name: Executing remote ssh command
+      uses: appleboy/ssh-action@v1.0.3
       with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: eu-north-1
-        instance-ids: ${{ secrets.AWS_INSTANCE_ID }}
-        working-directory: /home/ssm-user
-        command: |
-          aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin 471112859559.dkr.ecr.eu-north-1.amazonaws.com
-          rm -rf /home/ssm-user/deploy
-          mkdir -p /home/ssm-user/deploy
-          mv /tmp/deploy/* /home/ssm-user/deploy
-          cd /home/ssm-user/deploy/compose/
-          docker-compose down
-          chmod +x init-letsencrypt.sh
-          rm -rf data/certbot
-          ./init-letsencrypt.sh
-          docker-compose up -d
-
-    
-
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        port: 22
+        script: |
+          sudo cp -r /tmp/deploy/compose /home/ec2-user/
+          sudo chown -R ec2-user:ec2-user /home/ec2-user/compose 
+          cd /home/ec2-user/compose 
+          bash deploy-apps.sh "${{ steps.tf_parsed.outputs.bucket_name }}" "${{ steps.tf_parsed.outputs.record_name }}" "${{ steps.read_tag.outputs.image }}"
