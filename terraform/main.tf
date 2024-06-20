@@ -92,6 +92,6 @@ module "twitter_cert" {
   base_domain               = var.zone_name
   privat_key_algorithm      = "RSA"
   email_address             = var.email_address
-  subject_alternative_names = var.subject_alternative_names
+  subject_alternative_names = [ var.route_name ]
   bucket_name               = module.twitter_cert_bucket.bucket_name
 }
