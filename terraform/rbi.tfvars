@@ -11,7 +11,7 @@ repository_read_access_arns       = ["arn:aws:iam::471112859559:role/terraform-r
 
 ### Route53 config
 
-route_name = "demo1.anna-takacs.com"
+route_name = "tweet.anna-takacs.com"
 route_type = "A"
 route_ttl  = 300
 
@@ -32,4 +32,3 @@ bucket_name = "letsencrypt-cert-bucket"
 ### ACME config
 
 email_address             = "annaa.takacs@gmail.com"
-subject_alternative_names = ["demo1.anna-takacs.com"]
