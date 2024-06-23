@@ -11,7 +11,7 @@ repository_read_access_arns       = ["arn:aws:iam::471112859559:role/terraform-r
 
 ### Route53 config
 
-route_name = "tweet.anna-takacs.com"
+route_name = "demo.anna-takacs.com"
 route_type = "A"
 route_ttl  = 300
 
